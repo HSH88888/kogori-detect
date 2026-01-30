@@ -41,11 +41,31 @@
                 </div>
             </section>
 
+            <!-- Settings Section -->
+            <section class="settings-section" id="settingsSection">
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span class="material-symbols-outlined">tune</span>
+                        <span>코골이 감지 민감도</span>
+                        <span class="setting-value" id="thresholdValue">30 dB</span>
+                    </div>
+                    <input type="range" id="thresholdSlider" min="10" max="80" value="30" class="slider">
+                    <div class="slider-labels">
+                        <span>민감함 (10dB)</span>
+                        <span>둔감함 (80dB)</span>
+                    </div>
+                </div>
+            </section>
+
             <!-- Real-time Visualizer -->
             <section class="visualizer-section" id="visualizerSection" style="display: none;">
-                <h3><span class="material-symbols-outlined">graphic_eq</span> 실시간 음량</h3>
+                <div class="visualizer-header">
+                    <h3><span class="material-symbols-outlined">graphic_eq</span> 실시간 음량</h3>
+                    <div class="current-db" id="currentDb">0 dB</div>
+                </div>
                 <div class="volume-meter">
                     <div class="volume-bar" id="volumeBar"></div>
+                    <div class="volume-threshold-line" id="thresholdLine"></div>
                     <div class="volume-labels">
                         <span>조용</span>
                         <span>보통</span>

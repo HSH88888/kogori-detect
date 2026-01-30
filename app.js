@@ -18,7 +18,7 @@ class SnoreDetector {
         this.analysisInterval = null;
 
         // Snore detection configuration
-        this.snoreThreshold = 20; // 20dB threshold for visual indication
+        this.snoreThreshold = 30; // Default 30dB (user adjustable)
         this.maxVolume = 0;
 
         // Time-series data for chart (stored every 1 second)
@@ -63,7 +63,12 @@ class SnoreDetector {
             // Sleep Mode Elements
             sleepOverlay: document.getElementById('sleepOverlay'),
             sleepTime: document.getElementById('sleepTime'),
-            sleepStopBtn: document.getElementById('sleepStopBtn')
+            sleepStopBtn: document.getElementById('sleepStopBtn'),
+            // Settings Elements
+            thresholdSlider: document.getElementById('thresholdSlider'),
+            thresholdValue: document.getElementById('thresholdValue'),
+            currentDb: document.getElementById('currentDb'),
+            thresholdLine: document.getElementById('thresholdLine')
         };
 
         this.sleepModeTimeout = null;
@@ -88,6 +93,15 @@ class SnoreDetector {
             e.stopPropagation();
             this.stopRecording();
         });
+
+        // Settings Interactions
+        this.elements.thresholdSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.updateThreshold(value);
+        });
+
+        // Initialize threshold UI
+        this.updateThreshold(this.snoreThreshold);
 
         // Re-acquire wake lock when page becomes visible again
         document.addEventListener('visibilitychange', async () => {
@@ -240,6 +254,9 @@ class SnoreDetector {
         // Convert to dB (approximate)
         const volume = Math.max(0, Math.min(100, rms));
         const volumeDb = Math.round(20 * Math.log10(rms + 1));
+
+        // Update real-time dB display
+        this.elements.currentDb.textContent = `${volumeDb} dB`;
 
         // Update max volume for session
         if (volumeDb > this.maxVolume) {
@@ -640,6 +657,15 @@ class SnoreDetector {
                 this.elements.sleepOverlay.classList.remove('visible');
             }
         }, 3000);
+    }
+    updateThreshold(value) {
+        this.snoreThreshold = value;
+        this.elements.thresholdValue.textContent = `${value} dB`;
+        this.elements.thresholdSlider.value = value;
+
+        // Update threshold line position (assuming max 100dB for simple positioning)
+        // Adjust calculation to match the visual feel
+        this.elements.thresholdLine.style.left = `${value}%`;
     }
 }
 
