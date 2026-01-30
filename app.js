@@ -135,10 +135,18 @@ class SnoreDetector {
             });
 
             // Set up audio context for analysis
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            this.analyser = this.audioContext.createAnalyser();
-            this.analyser.fftSize = 2048;
-            this.analyser.smoothingTimeConstant = 0.8;
+            // Set up audio context for analysis
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                this.analyser = this.audioContext.createAnalyser();
+                this.analyser.fftSize = 2048;
+                this.analyser.smoothingTimeConstant = 0.8;
+            }
+
+            // Ensure AudioContext is running
+            if (this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
 
             this.microphone = this.audioContext.createMediaStreamSource(stream);
             this.microphone.connect(this.analyser);
@@ -161,8 +169,9 @@ class SnoreDetector {
             // Update UI
             this.updateUIForRecording();
 
-            // Activate Sleep Mode after 3 seconds
-            setTimeout(() => this.activateSleepMode(), 3000);
+            // Activate Sleep Mode after 3 minutes (180000 ms)
+            // Save timeout ID to clear it if stopped early
+            this.sleepModeTimer = setTimeout(() => this.activateSleepMode(), 180000);
 
             // Start timer
             this.timerInterval = setInterval(() => this.updateTimer(), 1000);
@@ -197,6 +206,12 @@ class SnoreDetector {
 
         // Release Wake Lock
         this.releaseWakeLock();
+
+        // Clear sleep mode initialization timer
+        if (this.sleepModeTimer) {
+            clearTimeout(this.sleepModeTimer);
+            this.sleepModeTimer = null;
+        }
 
         // Deactivate Sleep Mode
         this.deactivateSleepMode();
@@ -427,9 +442,15 @@ class SnoreDetector {
         const avgData = chartData.map(d => d.avg);
 
         // Create gradient
-        const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+        const gradient = ctx.createLinearGradient(0, 0, 0, 250);
         gradient.addColorStop(0, 'rgba(255, 118, 117, 0.5)'); // Red-ish for loud
         gradient.addColorStop(1, 'rgba(108, 92, 231, 0.1)'); // Purple-ish for quiet
+
+        // Debug: Log data to console to verify
+        console.log('Chart Data Points:', chartData.length);
+        if (chartData.length > 0) {
+            console.log('Sample Data:', chartData[0]);
+        }
 
         this.chart = new Chart(ctx, {
             type: 'line',
@@ -437,21 +458,21 @@ class SnoreDetector {
                 labels: labels,
                 datasets: [
                     {
-                        label: '최대 소음 (dB)',
+                        label: '최대 소음',
                         data: maxData,
                         borderColor: '#ff7675',
                         backgroundColor: gradient,
-                        borderWidth: 1,
+                        borderWidth: 1.5,
                         fill: true,
                         tension: 0.4,
                         pointRadius: 0,
-                        pointHoverRadius: 4
+                        pointHitRadius: 10
                     },
                     {
-                        label: '평균 소음 (dB)',
+                        label: '평균 소음',
                         data: avgData,
                         borderColor: '#6c5ce7',
-                        borderWidth: 1,
+                        borderWidth: 1.5,
                         fill: false,
                         tension: 0.4,
                         pointRadius: 0
