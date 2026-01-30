@@ -18,7 +18,7 @@ class SnoreDetector {
         this.analysisInterval = null;
 
         // Snore detection configuration
-        this.snoreThreshold = 60; // dB threshold for visual indication
+        this.snoreThreshold = 20; // 20dB threshold for visual indication
         this.maxVolume = 0;
 
         // Time-series data for chart (stored every 1 second)
@@ -383,7 +383,7 @@ class SnoreDetector {
         const loudestMoments = [...this.decibelHistory]
             .sort((a, b) => b.max - a.max)
             .slice(0, 10)
-            .filter(item => item.max > 50); // Show only if louder than 50dB
+            .filter(item => item.max > 20); // Show only if louder than 20dB
 
         if (loudestMoments.length === 0) {
             list.innerHTML = '<div class="event-item">특별히 시끄러운 순간이 없었습니다</div>';
@@ -560,7 +560,7 @@ class SnoreDetector {
         const loudestMoments = [...this.decibelHistory]
             .sort((a, b) => b.max - a.max)
             .slice(0, 20)
-            .filter(item => item.max > 50)
+            .filter(item => item.max > 20)
             .map(item => ({
                 time: this.formatDuration(item.time),
                 volume: item.max + ' dB'
