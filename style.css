@@ -594,3 +594,99 @@ body {
     background: var(--accent-primary);
     border-radius: 3px;
 }
+
+/* ========================================
+   Sleep Mode Overlay
+   ======================================== */
+.sleep-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #000000;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.sleep-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+.sleep-overlay.visible .sleep-content {
+    opacity: 1;
+}
+
+.sleep-content {
+    text-align: center;
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+}
+
+.sleep-icon {
+    font-size: 48px;
+    color: var(--accent-secondary);
+    margin-bottom: var(--spacing-lg);
+    display: block;
+}
+
+.sleep-time {
+    font-family: 'SF Mono', 'Consolas', monospace;
+    font-size: 3rem;
+    font-weight: 300;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: var(--spacing-md);
+}
+
+.sleep-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: var(--spacing-lg);
+}
+
+.recording-dot {
+    width: 12px;
+    height: 12px;
+    background: var(--danger);
+    border-radius: 50%;
+    animation: blink 2s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    50%,
+    100% {
+        opacity: 1;
+    }
+
+    25%,
+    75% {
+        opacity: 0.3;
+    }
+}
+
+.sleep-hint {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.2);
+    margin-bottom: var(--spacing-xl);
+    max-width: 250px;
+}
+
+.sleep-stop-btn {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sleep-overlay.visible .sleep-stop-btn {
+    opacity: 1;
+}

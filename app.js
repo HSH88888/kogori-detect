@@ -58,8 +58,15 @@ class SnoreDetector {
             severityCard: document.getElementById('severityCard'),
             eventsList: document.getElementById('eventsList'),
             newRecordingBtn: document.getElementById('newRecordingBtn'),
-            downloadBtn: document.getElementById('downloadBtn')
+            newRecordingBtn: document.getElementById('newRecordingBtn'),
+            downloadBtn: document.getElementById('downloadBtn'),
+            // Sleep Mode Elements
+            sleepOverlay: document.getElementById('sleepOverlay'),
+            sleepTime: document.getElementById('sleepTime'),
+            sleepStopBtn: document.getElementById('sleepStopBtn')
         };
+
+        this.sleepModeTimeout = null;
 
         this.init();
     }
@@ -69,6 +76,18 @@ class SnoreDetector {
         this.elements.stopBtn.addEventListener('click', () => this.stopRecording());
         this.elements.newRecordingBtn.addEventListener('click', () => this.resetForNewRecording());
         this.elements.downloadBtn.addEventListener('click', () => this.downloadResults());
+
+        // Sleep Mode Interactions
+        this.elements.sleepOverlay.addEventListener('click', (e) => {
+            if (e.target === this.elements.sleepOverlay || e.target.closest('.sleep-content')) {
+                this.toggleSleepVisibility();
+            }
+        });
+
+        this.elements.sleepStopBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.stopRecording();
+        });
 
         // Re-acquire wake lock when page becomes visible again
         document.addEventListener('visibilitychange', async () => {
@@ -143,6 +162,9 @@ class SnoreDetector {
             // Update UI
             this.updateUIForRecording();
 
+            // Activate Sleep Mode after 3 seconds
+            setTimeout(() => this.activateSleepMode(), 3000);
+
             // Start timer
             this.timerInterval = setInterval(() => this.updateTimer(), 1000);
 
@@ -176,6 +198,9 @@ class SnoreDetector {
 
         // Release Wake Lock
         this.releaseWakeLock();
+
+        // Deactivate Sleep Mode
+        this.deactivateSleepMode();
 
         // Finish any ongoing snore
         if (this.currentSnoreStart) {
@@ -275,7 +300,9 @@ class SnoreDetector {
 
     updateTimer() {
         const elapsed = Date.now() - this.startTime;
-        this.elements.elapsedTime.textContent = this.formatDuration(elapsed);
+        const formattedTime = this.formatDuration(elapsed);
+        this.elements.elapsedTime.textContent = formattedTime;
+        this.elements.sleepTime.textContent = formattedTime;
     }
 
     updateUIForRecording() {
@@ -503,6 +530,38 @@ class SnoreDetector {
             return `${hours}시간 ${mins}분`;
         }
         return `${mins}분`;
+    }
+
+    // Sleep Mode Methods
+    activateSleepMode() {
+        this.elements.sleepOverlay.classList.add('active');
+        // Hide content initially
+        this.elements.sleepOverlay.classList.remove('visible');
+    }
+
+    deactivateSleepMode() {
+        this.elements.sleepOverlay.classList.remove('active');
+        this.elements.sleepOverlay.classList.remove('visible');
+
+        if (this.sleepModeTimeout) {
+            clearTimeout(this.sleepModeTimeout);
+            this.sleepModeTimeout = null;
+        }
+    }
+
+    toggleSleepVisibility() {
+        this.elements.sleepOverlay.classList.add('visible');
+
+        if (this.sleepModeTimeout) {
+            clearTimeout(this.sleepModeTimeout);
+        }
+
+        // Hide again after 3 seconds of inactivity
+        this.sleepModeTimeout = setTimeout(() => {
+            if (this.isRecording) {
+                this.elements.sleepOverlay.classList.remove('visible');
+            }
+        }, 3000);
     }
 }
 

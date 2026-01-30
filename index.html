@@ -138,6 +138,23 @@
         </footer>
     </div>
 
+    <!-- Sleep Mode Overlay -->
+    <div class="sleep-overlay" id="sleepOverlay">
+        <div class="sleep-content">
+            <span class="material-symbols-outlined sleep-icon">bedtime</span>
+            <div class="sleep-time" id="sleepTime">00:00:00</div>
+            <div class="sleep-status">
+                <span class="recording-dot"></span>
+                녹음 중
+            </div>
+            <p class="sleep-hint">화면을 터치하면 일시적으로 상태를 확인할 수 있습니다</p>
+            <button class="btn btn-danger sleep-stop-btn" id="sleepStopBtn">
+                <span class="material-symbols-outlined">stop</span>
+                녹음 종료
+            </button>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 
