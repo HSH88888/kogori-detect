@@ -520,23 +520,37 @@ class SnoreDetector {
         this.elements.snoreCount.textContent = '0';
         this.elements.maxVolume.textContent = '0';
         this.elements.volumeBar.style.width = '0%';
+
+        // Reset stored data
+        this.decibelHistory = [];
+        this.maxVolume = 0;
     }
 
     downloadResults() {
         const totalDuration = Date.now() - this.startTime;
-        const totalSnoreDuration = this.snoreEvents.reduce((sum, e) => sum + e.duration, 0);
+
+        // Calculate average volume
+        const totalSum = this.decibelHistory.reduce((sum, item) => sum + item.avg, 0);
+        const avgVolume = this.decibelHistory.length > 0
+            ? Math.round(totalSum / this.decibelHistory.length)
+            : 0;
+
+        // Find loudest moments
+        const loudestMoments = [...this.decibelHistory]
+            .sort((a, b) => b.max - a.max)
+            .slice(0, 20)
+            .filter(item => item.max > 50)
+            .map(item => ({
+                time: this.formatDuration(item.time),
+                volume: item.max + ' dB'
+            }));
 
         const report = {
             date: new Date().toLocaleString('ko-KR'),
             totalDuration: this.formatDurationLong(totalDuration),
-            snoreCount: this.snoreCount,
-            snoreDuration: this.formatDurationLong(totalSnoreDuration),
-            snorePercentage: ((totalSnoreDuration / totalDuration) * 100).toFixed(1) + '%',
-            events: this.snoreEvents.map(e => ({
-                time: this.formatDuration(e.startTime),
-                duration: (e.duration / 1000).toFixed(1) + '초',
-                intensity: e.intensity
-            })),
+            averageVolume: avgVolume + ' dB',
+            maxVolume: this.maxVolume + ' dB',
+            loudestMoments: loudestMoments,
             timeSeriesData: this.decibelHistory.map(d => ({
                 time: this.formatDuration(d.time),
                 avgDb: d.avg,
