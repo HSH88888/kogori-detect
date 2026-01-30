@@ -17,18 +17,17 @@ class SnoreDetector {
         this.timerInterval = null;
         this.analysisInterval = null;
 
-        // Snore detection
-        this.snoreThreshold = 60; // dB threshold for snore detection
-        this.snoreEvents = [];
-        this.currentSnoreStart = null;
-        this.snoreCount = 0;
+        // Snore detection configuration
+        this.snoreThreshold = 60; // dB threshold for visual indication
         this.maxVolume = 0;
 
-        // Time-series data for chart (every 30 seconds)
-        this.timeSeriesData = [];
-        this.chartInterval = 30000; // 30 seconds
+        // Time-series data for chart (stored every 1 second)
+        this.decibelHistory = [];
+        this.chartInterval = 1000; // 1 second
         this.lastChartUpdate = 0;
-        this.currentPeriodSnores = 0;
+        this.currentSecondMaxDb = 0;
+        this.currentSecondSumDb = 0;
+        this.currentSecondSamples = 0;
 
         // Wake Lock (prevent screen sleep)
         this.wakeLock = null;
@@ -52,8 +51,9 @@ class SnoreDetector {
             stopBtn: document.getElementById('stopBtn'),
             resultsSection: document.getElementById('resultsSection'),
             totalTime: document.getElementById('totalTime'),
-            totalSnores: document.getElementById('totalSnores'),
-            snoreDuration: document.getElementById('snoreDuration'),
+            totalTime: document.getElementById('totalTime'),
+            avgVolume: document.getElementById('totalSnores'), // Reusing element ID
+            maxVolumeResult: document.getElementById('snoreDuration'), // Reusing element ID
             severity: document.getElementById('severity'),
             severityCard: document.getElementById('severityCard'),
             eventsList: document.getElementById('eventsList'),
@@ -144,13 +144,12 @@ class SnoreDetector {
             this.microphone.connect(this.analyser);
 
             // Reset data
-            this.snoreEvents = [];
-            this.timeSeriesData = [];
-            this.snoreCount = 0;
+            this.decibelHistory = [];
             this.maxVolume = 0;
-            this.currentSnoreStart = null;
             this.lastChartUpdate = Date.now();
-            this.currentPeriodSnores = 0;
+            this.currentSecondMaxDb = 0;
+            this.currentSecondSumDb = 0;
+            this.currentSecondSamples = 0;
 
             // Start recording
             this.isRecording = true;
@@ -203,10 +202,6 @@ class SnoreDetector {
         this.deactivateSleepMode();
 
         // Finish any ongoing snore
-        if (this.currentSnoreStart) {
-            this.endSnoreEvent();
-        }
-
         // Add final time period to chart
         this.addTimeSeriesPoint();
 
@@ -231,71 +226,57 @@ class SnoreDetector {
         const volume = Math.max(0, Math.min(100, rms));
         const volumeDb = Math.round(20 * Math.log10(rms + 1));
 
-        // Update max volume
+        // Update max volume for session
         if (volumeDb > this.maxVolume) {
             this.maxVolume = volumeDb;
             this.elements.maxVolume.textContent = volumeDb;
         }
 
+        // Track for current second stats
+        this.currentSecondSamples++;
+        this.currentSecondSumDb += volumeDb;
+        if (volumeDb > this.currentSecondMaxDb) {
+            this.currentSecondMaxDb = volumeDb;
+        }
+
         // Update volume bar
         this.elements.volumeBar.style.width = `${volume}%`;
 
-        // Snore detection
-        const isSnoring = volume > this.snoreThreshold;
-
-        if (isSnoring && !this.currentSnoreStart) {
-            // Start new snore event
-            this.currentSnoreStart = Date.now();
-        } else if (!isSnoring && this.currentSnoreStart) {
-            // End snore event (if it lasted more than 0.5 seconds)
-            const duration = Date.now() - this.currentSnoreStart;
-            if (duration > 500) {
-                this.endSnoreEvent();
-            } else {
-                this.currentSnoreStart = null; // Too short, ignore
-            }
+        // Visual indication if loud
+        if (volumeDb > this.snoreThreshold) {
+            this.elements.volumeBar.style.backgroundColor = 'var(--danger)';
+        } else {
+            this.elements.volumeBar.style.backgroundColor = ''; // Reset to gradient
         }
 
-        // Update time series data every 30 seconds
+        // Update time series data every 1 second
         const now = Date.now();
         if (now - this.lastChartUpdate >= this.chartInterval) {
             this.addTimeSeriesPoint();
             this.lastChartUpdate = now;
-            this.currentPeriodSnores = 0;
         }
     }
 
-    endSnoreEvent() {
-        if (!this.currentSnoreStart) return;
-
-        const endTime = Date.now();
-        const duration = endTime - this.currentSnoreStart;
-        const elapsed = this.currentSnoreStart - this.startTime;
-
-        // Determine intensity based on duration
-        let intensity = 'low';
-        if (duration > 5000) intensity = 'high';
-        else if (duration > 2000) intensity = 'medium';
-
-        this.snoreEvents.push({
-            startTime: elapsed,
-            duration: duration,
-            intensity: intensity
-        });
-
-        this.snoreCount++;
-        this.currentPeriodSnores++;
-        this.elements.snoreCount.textContent = this.snoreCount;
-
-        this.currentSnoreStart = null;
-    }
+    // Removed endSnoreEvent method
 
     addTimeSeriesPoint() {
         const elapsed = Date.now() - this.startTime;
-        this.timeSeriesData.push({
+
+        // Calculate average for this second
+        const avgDb = this.currentSecondSamples > 0
+            ? Math.round(this.currentSecondSumDb / this.currentSecondSamples)
+            : 0;
+
+        this.decibelHistory.push({
             time: elapsed,
-            snores: this.currentPeriodSnores
+            avg: avgDb,
+            max: this.currentSecondMaxDb
         });
+
+        // Reset for next second
+        this.currentSecondMaxDb = 0;
+        this.currentSecondSumDb = 0;
+        this.currentSecondSamples = 0;
     }
 
     updateTimer() {
@@ -319,13 +300,18 @@ class SnoreDetector {
 
     showResults() {
         const totalDuration = Date.now() - this.startTime;
-        const totalSnoreDuration = this.snoreEvents.reduce((sum, e) => sum + e.duration, 0);
+
+        // Calculate average volume
+        const totalSum = this.decibelHistory.reduce((sum, item) => sum + item.avg, 0);
+        const avgVolume = this.decibelHistory.length > 0
+            ? Math.round(totalSum / this.decibelHistory.length)
+            : 0;
 
         // Update UI
         this.elements.statusCard.classList.remove('recording');
         this.elements.statusIcon.textContent = 'check_circle';
         this.elements.statusTitle.textContent = '분석 완료';
-        this.elements.statusDesc.textContent = '수면 분석 결과를 확인하세요';
+        this.elements.statusDesc.textContent = '수면 소리 패턴을 확인하세요';
         this.elements.recordingTime.style.display = 'none';
         this.elements.visualizerSection.style.display = 'none';
         this.elements.startBtn.style.display = 'none';
@@ -334,58 +320,79 @@ class SnoreDetector {
 
         // Summary data
         this.elements.totalTime.textContent = this.formatDurationLong(totalDuration);
-        this.elements.totalSnores.textContent = `${this.snoreCount}회`;
-        this.elements.snoreDuration.textContent = this.formatDurationLong(totalSnoreDuration);
+        this.elements.avgVolume.textContent = `${avgVolume} dB`;
+        this.elements.maxVolumeResult.textContent = `${this.maxVolume} dB`;
 
-        // Severity assessment
-        const snorePercentage = (totalSnoreDuration / totalDuration) * 100;
-        let severity = '정상';
+        // Update labels
+        document.querySelector('.summary-card:nth-child(2) .summary-label').textContent = '평균 소음';
+        document.querySelector('.summary-card:nth-child(3) .summary-label').textContent = '최대 소음';
+
+        // Severity assessment based on average noise and peaks
+        // > 40dB average is considered noisy sleep
+        // > 60dB peaks indicate snoring/loud noise
+        const loudPeriods = this.decibelHistory.filter(d => d.max > 60).length;
+        const loudPercentage = (loudPeriods / this.decibelHistory.length) * 100;
+
+        let severity = '조용함';
         let severityClass = '';
 
-        if (snorePercentage > 20) {
-            severity = '심각';
+        if (loudPercentage > 30) {
+            severity = '시끄러움';
             severityClass = 'danger';
-        } else if (snorePercentage > 10) {
-            severity = '주의';
+        } else if (loudPercentage > 10) {
+            severity = '보통';
             severityClass = 'warning';
-        } else if (snorePercentage > 5) {
-            severity = '경미';
+        } else if (avgVolume > 40) { // Ambient noise is usually 30-40dB
+            severity = '약간 소음';
             severityClass = 'warning';
         }
 
         this.elements.severity.textContent = severity;
         this.elements.severityCard.className = `summary-card severity ${severityClass}`;
 
-        // Render events list
-        this.renderEventsList();
+        // Render events list - show loudest moments
+        this.renderLoudestMoments();
 
         // Create chart
         this.createChart();
     }
 
-    renderEventsList() {
+    renderLoudestMoments() {
         const list = this.elements.eventsList;
+        list.parentElement.querySelector('h4').innerHTML = '<span class="material-symbols-outlined">volume_up</span> 가장 시끄러웠던 순간들';
         list.innerHTML = '';
 
-        if (this.snoreEvents.length === 0) {
-            list.innerHTML = '<div class="event-item">코골이가 감지되지 않았습니다</div>';
+        if (this.decibelHistory.length === 0) return;
+
+        // Find top 10 loudest moments
+        const loudestMoments = [...this.decibelHistory]
+            .sort((a, b) => b.max - a.max)
+            .slice(0, 10)
+            .filter(item => item.max > 50); // Show only if louder than 50dB
+
+        if (loudestMoments.length === 0) {
+            list.innerHTML = '<div class="event-item">특별히 시끄러운 순간이 없었습니다</div>';
             return;
         }
 
-        // Show last 20 events
-        const events = this.snoreEvents.slice(-20).reverse();
+        loudestMoments.sort((a, b) => a.time - b.time); // Sort by time again
 
-        events.forEach(event => {
-            const item = document.createElement('div');
-            item.className = 'event-item';
-            item.innerHTML = `
-                <span class="event-time">${this.formatDuration(event.startTime)}</span>
-                <span class="event-duration">${(event.duration / 1000).toFixed(1)}초</span>
-                <span class="event-intensity ${event.intensity}">
-                    ${event.intensity === 'high' ? '강함' : event.intensity === 'medium' ? '보통' : '약함'}
+        loudestMoments.forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'event-item';
+
+            let intensityClass = 'low';
+            if (item.max > 70) intensityClass = 'high';
+            else if (item.max > 60) intensityClass = 'medium';
+
+            el.innerHTML = `
+                <span class="event-time">${this.formatDuration(item.time)}</span>
+                <span class="event-duration">${item.max} dB</span>
+                <span class="event-intensity ${intensityClass}">
+                    ${intensityClass === 'high' ? '매우 큼' : intensityClass === 'medium' ? '큼' : '보통'}
                 </span>
             `;
-            list.appendChild(item);
+            list.appendChild(el);
         });
     }
 
@@ -397,38 +404,71 @@ class SnoreDetector {
             this.chart.destroy();
         }
 
-        // Prepare data
-        const labels = this.timeSeriesData.map((d, i) => {
-            return this.formatDuration(d.time);
-        });
+        // Downsample data if too many points (limit to ~300 points for performance)
+        let chartData = this.decibelHistory;
+        if (chartData.length > 600) {
+            const factor = Math.ceil(chartData.length / 300);
+            chartData = [];
+            for (let i = 0; i < this.decibelHistory.length; i += factor) {
+                const chunk = this.decibelHistory.slice(i, i + factor);
+                const avg = chunk.reduce((sum, item) => sum + item.avg, 0) / chunk.length;
+                const max = Math.max(...chunk.map(item => item.max));
+                chartData.push({
+                    time: this.decibelHistory[i].time,
+                    avg: avg,
+                    max: max
+                });
+            }
+        }
 
-        const data = this.timeSeriesData.map(d => d.snores);
+        // Prepare data
+        const labels = chartData.map(d => this.formatDuration(d.time));
+        const maxData = chartData.map(d => d.max);
+        const avgData = chartData.map(d => d.avg);
 
         // Create gradient
         const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, 'rgba(108, 92, 231, 0.8)');
-        gradient.addColorStop(1, 'rgba(108, 92, 231, 0.1)');
+        gradient.addColorStop(0, 'rgba(255, 118, 117, 0.5)'); // Red-ish for loud
+        gradient.addColorStop(1, 'rgba(108, 92, 231, 0.1)'); // Purple-ish for quiet
 
         this.chart = new Chart(ctx, {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: '코골이 횟수',
-                    data: data,
-                    backgroundColor: gradient,
-                    borderColor: '#6c5ce7',
-                    borderWidth: 2,
-                    borderRadius: 6,
-                    borderSkipped: false
-                }]
+                datasets: [
+                    {
+                        label: '최대 소음 (dB)',
+                        data: maxData,
+                        borderColor: '#ff7675',
+                        backgroundColor: gradient,
+                        borderWidth: 1,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    },
+                    {
+                        label: '평균 소음 (dB)',
+                        data: avgData,
+                        borderColor: '#6c5ce7',
+                        borderWidth: 1,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 plugins: {
                     legend: {
-                        display: false
+                        display: true,
+                        labels: { color: '#a29bfe' }
                     },
                     tooltip: {
                         backgroundColor: '#2d2d4a',
@@ -436,28 +476,30 @@ class SnoreDetector {
                         bodyColor: '#a29bfe',
                         borderColor: '#6c5ce7',
                         borderWidth: 1,
-                        cornerRadius: 8,
-                        padding: 12
+                        callbacks: {
+                            label: function (context) {
+                                return context.dataset.label + ': ' + Math.round(context.raw);
+                            }
+                        }
                     }
                 },
                 scales: {
                     x: {
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)'
-                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
                         ticks: {
                             color: 'rgba(255, 255, 255, 0.5)',
-                            maxRotation: 45
+                            maxTicksLimit: 8
                         }
                     },
                     y: {
                         beginAtZero: true,
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)'
-                        },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.5)',
-                            stepSize: 1
+                        suggestedMax: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: 'rgba(255, 255, 255, 0.5)' },
+                        title: {
+                            display: true,
+                            text: '소리 크기 (dB)',
+                            color: 'rgba(255, 255, 255, 0.3)'
                         }
                     }
                 }
@@ -495,9 +537,10 @@ class SnoreDetector {
                 duration: (e.duration / 1000).toFixed(1) + '초',
                 intensity: e.intensity
             })),
-            timeSeriesData: this.timeSeriesData.map(d => ({
+            timeSeriesData: this.decibelHistory.map(d => ({
                 time: this.formatDuration(d.time),
-                snores: d.snores
+                avgDb: d.avg,
+                maxDb: d.max
             }))
         };
 
