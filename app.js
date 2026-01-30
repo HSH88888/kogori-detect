@@ -30,6 +30,9 @@ class SnoreDetector {
         this.lastChartUpdate = 0;
         this.currentPeriodSnores = 0;
 
+        // Wake Lock (prevent screen sleep)
+        this.wakeLock = null;
+
         // Chart
         this.chart = null;
 
@@ -66,6 +69,39 @@ class SnoreDetector {
         this.elements.stopBtn.addEventListener('click', () => this.stopRecording());
         this.elements.newRecordingBtn.addEventListener('click', () => this.resetForNewRecording());
         this.elements.downloadBtn.addEventListener('click', () => this.downloadResults());
+
+        // Re-acquire wake lock when page becomes visible again
+        document.addEventListener('visibilitychange', async () => {
+            if (this.isRecording && document.visibilityState === 'visible') {
+                await this.requestWakeLock();
+            }
+        });
+    }
+
+    async requestWakeLock() {
+        if ('wakeLock' in navigator) {
+            try {
+                this.wakeLock = await navigator.wakeLock.request('screen');
+                console.log('Wake Lock activated - screen will stay on');
+
+                this.wakeLock.addEventListener('release', () => {
+                    console.log('Wake Lock released');
+                });
+            } catch (err) {
+                console.log('Wake Lock failed:', err.message);
+            }
+        } else {
+            console.log('Wake Lock API not supported - screen may turn off');
+            // Show warning to user
+            this.elements.statusDesc.textContent = '⚠️ 화면을 켜둔 상태로 유지해주세요';
+        }
+    }
+
+    releaseWakeLock() {
+        if (this.wakeLock) {
+            this.wakeLock.release();
+            this.wakeLock = null;
+        }
     }
 
     async startRecording() {
@@ -101,6 +137,9 @@ class SnoreDetector {
             this.isRecording = true;
             this.startTime = Date.now();
 
+            // Request Wake Lock to prevent screen sleep
+            await this.requestWakeLock();
+
             // Update UI
             this.updateUIForRecording();
 
@@ -134,6 +173,9 @@ class SnoreDetector {
             this.audioContext.close();
             this.audioContext = null;
         }
+
+        // Release Wake Lock
+        this.releaseWakeLock();
 
         // Finish any ongoing snore
         if (this.currentSnoreStart) {
