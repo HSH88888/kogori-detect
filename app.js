@@ -32,9 +32,10 @@ class SnoreDetector {
             // Recording UI
             recordingTime: document.getElementById('recordingTime'),
             currentDb: document.getElementById('currentDb'),
-            dbRing: document.getElementById('dbRing'),
+            dbDisk: document.getElementById('dbDisk'), // Changed from dbRing
             thresholdSlider: document.getElementById('thresholdSlider'),
             thresholdValue: document.getElementById('thresholdValue'),
+            ticksContainer: document.getElementById('ticks'),
 
             // Results UI
             resultDate: document.getElementById('resultDate'),
@@ -58,6 +59,9 @@ class SnoreDetector {
     }
 
     init() {
+        // Create Ticks
+        this.createTicks();
+
         // Event Listeners
         this.elements.startAppBtn.addEventListener('click', () => this.startRecording());
         this.elements.stopBtn.addEventListener('click', () => this.stopRecording());
@@ -111,6 +115,18 @@ class SnoreDetector {
         // Set Today's Date
         const today = new Date();
         this.elements.resultDate.textContent = `${today.getFullYear()}. ${today.getMonth() + 1}. ${today.getDate()}`;
+    }
+
+    createTicks() {
+        if (!this.elements.ticksContainer) return;
+        this.elements.ticksContainer.innerHTML = '';
+        for (let i = 0; i < 60; i++) {
+            const tick = document.createElement('div');
+            tick.className = 'tick';
+            if (i % 5 === 0) tick.classList.add('major');
+            tick.style.transform = `translateX(-50%) rotate(${i * 6}deg)`;
+            this.elements.ticksContainer.appendChild(tick);
+        }
     }
 
     // View Navigation Logic
@@ -232,20 +248,15 @@ class SnoreDetector {
         // Update UI Text
         this.elements.currentDb.textContent = `${volumeDb} dB`;
 
-        // Update Ring Visualization
-        // Stroke-dasharray is 283. 
-        // 0dB -> stroke-dashoffset: 283 (Empty)
-        // 100dB -> stroke-dashoffset: 0 (Full)
-        const maxOffset = 283;
-        const offset = maxOffset - (Math.min(volumeDb, 100) / 100 * maxOffset);
-        this.elements.dbRing.style.strokeDashoffset = offset;
+        // Update Time Timer Visualization (Conic Gradient)
+        // 100dB -> 360 deg
+        const degrees = Math.min((volumeDb / 100) * 360, 360);
 
-        // Change color based on threshold
-        if (volumeDb > this.snoreThreshold) {
-            this.elements.dbRing.style.stroke = 'var(--danger)'; // Red
-        } else {
-            this.elements.dbRing.style.stroke = 'var(--accent-primary)'; // Purple
-        }
+        // Color based on threshold
+        let color = 'var(--accent-primary)';
+        if (volumeDb > this.snoreThreshold) color = 'var(--danger)';
+
+        this.elements.dbDisk.style.background = `conic-gradient(${color} ${degrees}deg, transparent ${degrees}deg)`;
 
         // Store Data Logic (Sample once per second)
         const now = Date.now();

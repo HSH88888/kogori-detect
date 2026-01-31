@@ -203,42 +203,111 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    background: var(--bg-tertiary);
+    border-radius: 50%;
+    box-shadow:
+        -8px -8px 15px rgba(255, 255, 255, 0.05),
+        8px 8px 15px rgba(0, 0, 0, 0.3);
 }
 
-.clock-ring {
+/* Ticks */
+.ticks {
     position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     height: 100%;
-    transform: rotate(-90deg);
+    border-radius: 50%;
+    z-index: 1;
+    pointer-events: none;
 }
 
-.ring-bg {
-    fill: none;
-    stroke: var(--bg-tertiary);
-    stroke-width: 4;
+.tick {
+    position: absolute;
+    width: 2px;
+    height: 10px;
+    background: var(--text-muted);
+    left: 50%;
+    top: 10px;
+    transform-origin: 50% 130px;
+    /* (280/2) - 10 = 130 distance from top of tick to center */
+    transform: translateX(-50%);
 }
 
-.ring-progress {
-    fill: none;
-    stroke: var(--accent-primary);
-    stroke-width: 4;
-    stroke-dasharray: 283;
-    /* 2 * PI * 45 */
-    stroke-dashoffset: 283;
-    transition: stroke-dashoffset 0.1s linear, stroke 0.3s ease;
-    filter: drop-shadow(0 0 10px var(--accent-primary));
+.tick.major {
+    width: 4px;
+    height: 15px;
+    background: var(--text-secondary);
+}
+
+/* Numbers */
+.clock-labels {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.label-num {
+    position: absolute;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.num-12 {
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.num-3 {
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.num-6 {
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.num-9 {
+    left: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Visualizer Disk */
+.timer-disk {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    /* Start transparent, JS will update conic-gradient */
+    background: conic-gradient(var(--accent-primary) 0deg, transparent 0deg);
+    opacity: 0.3;
+    z-index: 0;
+    transition: background 0.1s linear;
 }
 
 .clock-face {
     text-align: center;
-    z-index: 2;
+    z-index: 10;
+    background: var(--bg-primary);
+    /* Inner circle to create donut effect */
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: inset 5px 5px 10px rgba(0, 0, 0, 0.5), inset -5px -5px 10px rgba(255, 255, 255, 0.05);
 }
 
 .clock-time {
     font-family: 'SF Mono', 'Consolas', monospace;
-    font-size: 3rem;
+    font-size: 2.5rem;
     font-weight: 300;
     color: var(--text-primary);
     letter-spacing: -2px;
