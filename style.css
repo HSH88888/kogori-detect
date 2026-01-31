@@ -161,6 +161,24 @@ body {
     padding: 16px 32px;
     font-size: 1.25rem;
     border-radius: var(--radius-full);
+    margin-bottom: var(--spacing-md);
+}
+
+.privacy-notice {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px 16px;
+    border-radius: var(--radius-full);
+}
+
+.icon-inline {
+    font-size: 16px;
+    vertical-align: middle;
 }
 
 /* ========================================
