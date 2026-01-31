@@ -439,6 +439,12 @@ body {
     justify-content: center;
     gap: var(--spacing-md);
     padding: var(--spacing-md) 0;
+    /* Sticky footer for controls */
+    position: sticky;
+    bottom: 0;
+    background: inherit;
+    /* Matches container background */
+    z-index: 100;
 }
 
 .btn {
@@ -688,37 +694,34 @@ body {
     .app-container {
         padding: var(--spacing-sm);
         height: 100dvh;
-        /* Ensure container fits dynamic viewport */
+        /* Mobile viewport fix */
+        overflow: hidden;
+        /* Prevent body scroll */
     }
 
+    /* Hide Header to save space */
     .header {
-        padding: var(--spacing-sm) 0;
-        margin-bottom: 0;
-    }
-
-    .logo {
-        margin-bottom: 0;
-    }
-
-    .logo .material-symbols-outlined {
-        font-size: 24px;
-    }
-
-    .logo h1 {
-        font-size: 1.1rem;
-    }
-
-    .header-subtitle {
         display: none;
-        /* Hide subtitle on mobile to save space */
     }
 
     .main-content {
         padding: 0;
         gap: var(--spacing-xs);
-        /* Reduce gap significantly */
-        justify-content: flex-start;
-        /* Start from top to prevent cutting off bottom */
+        overflow-y: auto;
+        /* Allow scrolling inside content if needed */
+        height: 100%;
+        /* Fill container */
+
+        /* Hide scrollbar for cleaner look */
+        scrollbar-width: none;
+        /* Firefox */
+        -ms-overflow-style: none;
+        /* IE and Edge */
+    }
+
+    .main-content::-webkit-scrollbar {
+        display: none;
+        /* Chrome, Safari, Opera */
     }
 
     .status-card {
@@ -726,73 +729,95 @@ body {
         display: flex;
         flex-direction: column;
         justify-content: center;
-        flex: 1;
-        /* Take available space */
-        min-height: 0;
-        /* Allow shrinking */
+        flex: 0 0 auto;
+        /* Don't expand unnecessarily */
+        min-height: auto;
         margin-bottom: var(--spacing-xs);
     }
 
     .status-icon {
-        width: 80px;
-        height: 80px;
-        margin-bottom: var(--spacing-sm);
+        width: 60px;
+        /* Smaller icon */
+        height: 60px;
+        margin: 0 auto var(--spacing-sm);
     }
 
     .status-icon .material-symbols-outlined {
-        font-size: 36px;
+        font-size: 32px;
     }
 
-    .status-text h2 {
-        font-size: 1.1rem;
+    .recording-time {
+        font-size: 1.5rem;
+        /* Make time visible */
+        padding: 4px 12px;
+        margin-top: var(--spacing-xs);
     }
 
-    .settings-section {
-        padding: var(--spacing-sm) var(--spacing-md);
-        margin-bottom: 0;
-        /* Remove bottom margin to attach to controls */
-    }
-
+    /* Settings & Visualizer */
+    .settings-section,
     .visualizer-section {
-        padding: var(--spacing-sm) var(--spacing-md);
-        margin-bottom: 0;
+        padding: var(--spacing-md);
+        flex: 0 0 auto;
+        /* Don't expand */
     }
 
-    .visualizer-header {
-        margin-bottom: var(--spacing-xs);
+    .setting-item {
+        gap: 4px;
     }
 
+    /* Compact Visualizer */
+    .visualizer-header h3 {
+        font-size: 0.8rem;
+    }
+
+    .current-db {
+        font-size: 1rem;
+    }
+
+    .volume-meter {
+        margin-bottom: var(--spacing-md);
+    }
+
+    /* Compact Counter */
+    .counter-item {
+        padding: var(--spacing-sm);
+    }
+
+    .counter-value {
+        font-size: 1.5rem;
+    }
+
+    .counter-label {
+        font-size: 0.7rem;
+    }
+
+    /* Controls fixed at bottom */
     .controls {
-        padding: var(--spacing-xs) 0;
-        /* Reduce padding */
-        margin-top: 0;
+        margin-top: auto;
+        /* Push to bottom */
+        padding-top: var(--spacing-sm);
+        padding-bottom: var(--spacing-sm);
+        background: var(--bg-primary);
+        /* Cover content behind */
+        border-top: 1px solid var(--border-subtle);
+        /* Separator */
+        flex: 0 0 auto;
     }
 
     .btn-large {
         width: 100%;
-        padding: var(--spacing-md);
+        padding: 12px;
         font-size: 1rem;
     }
 
     .footer {
         display: none;
-        /* Hide footer entirely on mobile */
     }
 
-    /* Recording time adjustment */
-    .recording-time {
-        font-size: 1.5rem;
-        margin-top: var(--spacing-xs);
-        padding: var(--spacing-xs) var(--spacing-md);
-    }
-
-    /* Result section scroll fix */
     .results-section {
-        flex: 1;
         overflow-y: auto;
-        padding: var(--spacing-md);
         max-height: none;
-        /* Remove fixed height constraint */
+        flex: 1;
     }
 }
 
