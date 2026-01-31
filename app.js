@@ -92,6 +92,19 @@ class SnoreDetector {
             this.stopRecording();
         });
 
+        // Chart Controls
+        document.querySelectorAll('.btn-xs').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Update active state
+                document.querySelectorAll('.btn-xs').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+
+                // Render with new unit
+                const unit = e.target.dataset.unit;
+                this.renderChart(unit === 'all' ? 'all' : parseInt(unit));
+            });
+        });
+
         // Initialize UI State
         this.updateThreshold(this.snoreThreshold);
 
@@ -308,20 +321,63 @@ class SnoreDetector {
         this.renderEvents();
     }
 
-    renderChart() {
+    renderChart(unitMinutes = 1) {
         const ctx = document.getElementById('snoreChart').getContext('2d');
         if (this.chart) this.chart.destroy();
 
-        // Formatting labels: only show specific intervals to avoid clutter
-        const labels = this.decibelHistory.map(d => this.formatDuration(d.time));
-        const data = this.decibelHistory.map(d => d.max);
+        // Aggregate Data
+        let chartData = [];
+
+        if (unitMinutes === 'all') {
+            // Smart auto-aggregation for 'All' to avoid crash
+            const totalDurationMinutes = (this.decibelHistory.length) / 60; // Approx
+            if (totalDurationMinutes > 120) unitMinutes = 10;
+            else if (totalDurationMinutes > 30) unitMinutes = 1;
+            else unitMinutes = 0.1; // 6s aggregation
+        }
+
+        const groupSize = Math.max(1, Math.floor(unitMinutes * 60)); // items per group (assuming 1 item = 1 sec)
+
+        if (this.decibelHistory.length > 0) {
+            let tempMax = 0;
+            let tempSum = 0;
+            let count = 0;
+            let startTime = this.decibelHistory[0].time;
+
+            for (let i = 0; i < this.decibelHistory.length; i++) {
+                const item = this.decibelHistory[i];
+                tempMax = Math.max(tempMax, item.max);
+                tempSum += item.avg;
+                count++;
+
+                // If group filled or last item
+                if (count >= groupSize || i === this.decibelHistory.length - 1) {
+                    chartData.push({
+                        time: startTime,
+                        max: tempMax,
+                        avg: Math.round(tempSum / count)
+                    });
+
+                    // Reset
+                    tempMax = 0;
+                    tempSum = 0;
+                    count = 0;
+                    if (i + 1 < this.decibelHistory.length) {
+                        startTime = this.decibelHistory[i + 1].time;
+                    }
+                }
+            }
+        }
+
+        const labels = chartData.map(d => this.formatDuration(d.time));
+        const data = chartData.map(d => d.max);
 
         this.chart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: '소음(dB)',
+                    label: '최대 소음(dB)',
                     data: data,
                     borderColor: '#6c5ce7',
                     backgroundColor: (context) => {
@@ -332,8 +388,8 @@ class SnoreDetector {
                         return gradient;
                     },
                     fill: true,
-                    tension: 0.4,
-                    pointRadius: 0,
+                    tension: 0.3,
+                    pointRadius: chartData.length > 50 ? 0 : 3, // Show points only if few data
                     pointHitRadius: 10
                 }]
             },
@@ -342,9 +398,10 @@ class SnoreDetector {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { display: false }, // Hide x axis labels for clean look
+                    x: { display: false },
                     y: {
                         beginAtZero: true,
+                        max: 100,
                         grid: { color: 'rgba(255,255,255,0.05)' },
                         ticks: { color: 'rgba(255,255,255,0.5)' }
                     }

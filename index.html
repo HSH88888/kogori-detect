@@ -113,7 +113,15 @@
             <!-- Detail Screen (Scroll reveals this) -->
             <div class="result-detail-screen" id="detailScreen">
                 <div class="chart-container">
-                    <h4>소음 변화 그래프</h4>
+                    <div class="chart-header">
+                        <h4>소음 변화 그래프</h4>
+                        <div class="chart-controls" id="chartControls">
+                            <button class="btn-xs active" data-unit="1">1분</button>
+                            <button class="btn-xs" data-unit="10">10분</button>
+                            <button class="btn-xs" data-unit="60">60분</button>
+                            <button class="btn-xs" data-unit="all">전체</button>
+                        </div>
+                    </div>
                     <canvas id="snoreChart"></canvas>
                 </div>
 
