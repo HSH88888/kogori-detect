@@ -15,150 +15,130 @@
 
 <body>
     <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="logo">
-                <span class="material-symbols-outlined">bedtime</span>
+        <!-- View 1: Home Screen -->
+        <section id="homeView" class="view active">
+            <div class="home-content">
+                <div class="logo-large">
+                    <span class="material-symbols-outlined">bedtime</span>
+                </div>
                 <h1>Snore Detector</h1>
+                <p>당신의 편안한 잠을 위한<br>똑똑한 코골이 분석기</p>
+                <button id="startAppBtn" class="btn btn-primary btn-start-app">
+                    <span class="material-symbols-outlined">mic</span>
+                    분석 시작하기
+                </button>
             </div>
-            <div class="header-subtitle">코골이 감지 및 수면 분석</div>
-        </header>
+            <footer class="footer-simple">
+                <p>ⓒ 2026 Kogori Detect</p>
+            </footer>
+        </section>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Status Card -->
-            <section class="status-card" id="statusCard">
-                <div class="status-icon">
-                    <span class="material-symbols-outlined" id="statusIcon">mic_off</span>
+        <!-- View 2: Recording Screen (Clock UI) -->
+        <section id="recordingView" class="view">
+            <div class="clock-container">
+                <!-- Circular Time Progress / Visualizer -->
+                <div class="clock-circle">
+                    <div class="clock-face">
+                        <div class="clock-time" id="recordingTime">00:00:00</div>
+                        <div class="clock-status">녹음 중...</div>
+                    </div>
+                    <!-- SVG Ring for Decibel Visualization -->
+                    <svg class="clock-ring" viewBox="0 0 100 100">
+                        <circle class="ring-bg" cx="50" cy="50" r="45"></circle>
+                        <circle class="ring-progress" id="dbRing" cx="50" cy="50" r="45"></circle>
+                    </svg>
                 </div>
-                <div class="status-text">
-                    <h2 id="statusTitle">녹음 대기 중</h2>
-                    <p id="statusDesc">시작 버튼을 눌러 수면 녹음을 시작하세요</p>
-                </div>
-                <div class="recording-time" id="recordingTime" style="display: none;">
-                    <span class="material-symbols-outlined">schedule</span>
-                    <span id="elapsedTime">00:00:00</span>
-                </div>
-            </section>
+            </div>
 
-            <!-- Settings Section -->
-            <section class="settings-section" id="settingsSection">
-                <div class="setting-item">
-                    <div class="setting-label">
-                        <span class="material-symbols-outlined">tune</span>
-                        <span>코골이 감지 민감도</span>
-                        <span class="setting-value" id="thresholdValue">30 dB</span>
-                    </div>
-                    <input type="range" id="thresholdSlider" min="10" max="80" value="30" class="slider">
-                    <div class="slider-labels">
-                        <span>민감함 (10dB)</span>
-                        <span>둔감함 (80dB)</span>
-                    </div>
+            <div class="recording-infos">
+                <div class="info-item">
+                    <span class="material-symbols-outlined">graphic_eq</span>
+                    <span class="current-db-text" id="currentDb">0 dB</span>
                 </div>
-            </section>
+                <div class="settings-mini">
+                    <span class="material-symbols-outlined">tune</span>
+                    <input type="range" id="thresholdSlider" min="10" max="80" value="30" class="slider-mini">
+                    <span id="thresholdValue">30 dB</span>
+                </div>
+            </div>
 
-            <!-- Real-time Visualizer -->
-            <section class="visualizer-section" id="visualizerSection" style="display: none;">
-                <div class="visualizer-header">
-                    <h3><span class="material-symbols-outlined">graphic_eq</span> 실시간 음량</h3>
-                    <div class="current-db" id="currentDb">0 dB</div>
-                </div>
-                <div class="volume-meter">
-                    <div class="volume-bar" id="volumeBar"></div>
-                    <div class="volume-threshold-line" id="thresholdLine"></div>
-                    <div class="volume-labels">
-                        <span>조용</span>
-                        <span>보통</span>
-                        <span>코골이</span>
-                    </div>
-                </div>
-                <div class="snore-counter">
-                    <div class="counter-item">
-                        <span class="counter-value" id="snoreCount">0</span>
-                        <span class="counter-label">코골이 감지</span>
-                    </div>
-                    <div class="counter-item">
-                        <span class="counter-value" id="maxVolume">0</span>
-                        <span class="counter-label">최대 음량 (dB)</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Control Buttons -->
-            <section class="controls">
-                <button id="startBtn" class="btn btn-primary btn-large">
-                    <span class="material-symbols-outlined">fiber_manual_record</span>
-                    녹음 시작
-                </button>
-                <button id="stopBtn" class="btn btn-danger btn-large" style="display: none;">
+            <div class="controls-bottom">
+                <button id="stopBtn" class="btn btn-danger btn-circle-large">
                     <span class="material-symbols-outlined">stop</span>
-                    녹음 종료
                 </button>
-            </section>
+                <div class="btn-label">종료</div>
+            </div>
+        </section>
 
-            <!-- Results Section (shown after recording) -->
-            <section class="results-section" id="resultsSection" style="display: none;">
-                <h3><span class="material-symbols-outlined">analytics</span> 수면 분석 결과</h3>
+        <!-- View 3: Results Screen -->
+        <section id="resultsView" class="view">
+            <!-- Summary Screen (No Scroll) -->
+            <div class="result-summary-screen">
+                <div class="summary-header">
+                    <h2>수면 분석 결과</h2>
+                    <p class="date-text" id="resultDate">2026. 01. 31</p>
+                </div>
 
-                <!-- Summary Cards -->
-                <div class="summary-cards">
-                    <div class="summary-card">
-                        <span class="material-symbols-outlined">schedule</span>
-                        <div class="summary-value" id="totalTime">0시간 0분</div>
-                        <div class="summary-label">총 녹음 시간</div>
+                <div class="summary-main-card" id="severityCard">
+                    <div class="severity-icon">
+                        <span class="material-symbols-outlined" id="severityIcon">check_circle</span>
                     </div>
-                    <div class="summary-card">
-                        <span class="material-symbols-outlined">notifications_active</span>
-                        <div class="summary-value" id="totalSnores">0회</div>
-                        <div class="summary-label">코골이 횟수</div>
-                    </div>
-                    <div class="summary-card">
-                        <span class="material-symbols-outlined">timer</span>
-                        <div class="summary-value" id="snoreDuration">0분</div>
-                        <div class="summary-label">코골이 시간</div>
-                    </div>
-                    <div class="summary-card severity" id="severityCard">
-                        <span class="material-symbols-outlined">health_and_safety</span>
-                        <div class="summary-value" id="severity">정상</div>
-                        <div class="summary-label">코골이 수준</div>
+                    <div class="severity-text">
+                        <h3 id="severity">정상</h3>
+                        <p id="statusDesc">편안한 수면이었습니다</p>
                     </div>
                 </div>
 
-                <!-- Time Chart -->
+                <div class="summary-stats-grid">
+                    <div class="stat-item">
+                        <span class="label">수면 시간</span>
+                        <span class="value" id="totalTime">00:00</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">평균 소음</span>
+                        <span class="value" id="avgVolume">0 dB</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">최대 소음</span>
+                        <span class="value" id="maxVolumeResult">0 dB</span>
+                    </div>
+                </div>
+
+                <div class="scroll-hint" id="showDetailBtn">
+                    <span>자세한 분석 보기</span>
+                    <span class="material-symbols-outlined bounce">keyboard_arrow_down</span>
+                </div>
+            </div>
+
+            <!-- Detail Screen (Scroll reveals this) -->
+            <div class="result-detail-screen" id="detailScreen">
                 <div class="chart-container">
-                    <h4>시간대별 코골이 발생 그래프</h4>
+                    <h4>소음 변화 그래프</h4>
                     <canvas id="snoreChart"></canvas>
                 </div>
 
-                <!-- Snore Events List -->
                 <div class="events-section">
-                    <h4><span class="material-symbols-outlined">list</span> 코골이 발생 시간</h4>
+                    <h4><span class="material-symbols-outlined">volume_up</span> 시끄러운 순간들</h4>
                     <div class="events-list" id="eventsList">
-                        <!-- Events will be added here -->
+                        <!-- Items added by JS -->
                     </div>
                 </div>
 
-                <!-- Actions -->
                 <div class="result-actions">
-                    <button id="newRecordingBtn" class="btn btn-secondary">
-                        <span class="material-symbols-outlined">refresh</span>
-                        새 녹음
-                    </button>
-                    <button id="downloadBtn" class="btn btn-primary">
+                    <button id="downloadBtn" class="btn btn-secondary">
                         <span class="material-symbols-outlined">download</span>
-                        결과 저장
+                        저장
+                    </button>
+                    <button id="newRecordingBtn" class="btn btn-primary">
+                        <span class="material-symbols-outlined">refresh</span>
+                        새로운 녹음
                     </button>
                 </div>
-            </section>
-        </main>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <p>🌙 좋은 수면을 위한 첫 걸음</p>
-        </footer>
+            </div>
+        </section>
     </div>
 
-    <!-- Sleep Mode Overlay -->
+    <!-- Sleep Mode Overlay (Kept as is) -->
     <div class="sleep-overlay" id="sleepOverlay">
         <div class="sleep-content">
             <span class="material-symbols-outlined sleep-icon">bedtime</span>
@@ -167,10 +147,9 @@
                 <span class="recording-dot"></span>
                 녹음 중
             </div>
-            <p class="sleep-hint">화면을 터치하면 일시적으로 상태를 확인할 수 있습니다</p>
+            <p class="sleep-hint">화면을 터치하면 상태 확인</p>
             <button class="btn btn-danger sleep-stop-btn" id="sleepStopBtn">
                 <span class="material-symbols-outlined">stop</span>
-                녹음 종료
             </button>
         </div>
     </div>
