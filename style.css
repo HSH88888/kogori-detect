@@ -48,6 +48,25 @@
     padding: 0;
 }
 
+.btn-xs.active {
+    background: var(--surface-glass);
+    color: var(--accent-secondary);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 250px;
+    /* Force fixed height */
+    width: 100%;
+}
+
+/* Events List */
+.events-section {
+    margin-top: var(--spacing-lg);
+}
+
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--bg-primary);
