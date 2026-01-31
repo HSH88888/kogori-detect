@@ -67,6 +67,10 @@ class SnoreDetector {
         // Detail View Toggle
         this.elements.showDetailBtn.addEventListener('click', () => {
             this.elements.detailScreen.style.display = 'block';
+
+            // Render chart only when visible to prevent sizing issues
+            this.renderChart();
+
             setTimeout(() => {
                 this.elements.detailScreen.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
@@ -108,7 +112,7 @@ class SnoreDetector {
 
         // Show target view
         const targetView = document.getElementById(viewId);
-        targetView.style.display = 'flex';
+        targetView.style.display = ''; // Reset inline style to let CSS take over (flex or block)
         // Small delay to trigger opacity transition
         setTimeout(() => {
             targetView.classList.add('active');
@@ -300,8 +304,7 @@ class SnoreDetector {
         this.elements.severityIcon.textContent = icon;
         this.elements.severityIcon.style.color = color;
 
-        // Render Chart & List
-        this.renderChart();
+        // Render List (Chart is rendered when 'Show Details' is clicked)
         this.renderEvents();
     }
 
