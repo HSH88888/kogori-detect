@@ -191,6 +191,12 @@ class SnoreDetector {
             this.isRecording = true;
             this.startTime = Date.now();
 
+            // Advanced Snore Detection Variables
+            this.snoreConsecutiveCount = 0; // Frames that look like snore
+            this.isSnoring = false;
+            this.lastSnoreTime = 0;
+            this.snoreEvents = []; // Store actual snore start/end times
+
             // Update UI
             this.switchView('recordingView');
             this.requestWakeLock();
@@ -237,45 +243,105 @@ class SnoreDetector {
         const dataArray = new Uint8Array(bufferLength);
         this.analyser.getByteFrequencyData(dataArray);
 
+        // Calculate Average Volume (Approx dB)
         let sum = 0;
         for (let i = 0; i < bufferLength; i++) {
             sum += dataArray[i];
         }
         const average = sum / bufferLength;
-        // Approximate dB calculation
         const volumeDb = Math.round(average * (100 / 255) * 1.5);
 
-        // Update UI Text
+        // Update UI
         this.elements.currentDb.textContent = `${volumeDb} dB`;
 
-        // Update Time Timer Visualization (Conic Gradient)
-        // 100dB -> 360 deg
+        // Visualizer (Conic Gradient)
         const degrees = Math.min((volumeDb / 100) * 360, 360);
-
-        // Color based on threshold
         let color = 'var(--accent-primary)';
         if (volumeDb > this.snoreThreshold) color = 'var(--danger)';
-
         this.elements.dbDisk.style.background = `conic-gradient(${color} ${degrees}deg, transparent ${degrees}deg)`;
 
-        // Store Data Logic (Sample once per second)
+        // --- Advanced Snore Detection Algorithm ---
+
+        // 1. Calculate Frequency Balance
+        // We use sampleRate to find bin indices.
+        // Usually sampleRate is 44100 or 48000. fftSize is 2048.
+        // Bin size = sampleRate / fftSize ~= 21.5Hz per bin.
+
+        const binSize = this.audioContext.sampleRate / this.analyser.fftSize;
+
+        const lowBandStart = Math.floor(100 / binSize); // 100Hz
+        const lowBandEnd = Math.floor(800 / binSize);   // 800Hz (Snore Core)
+        const highBandStart = Math.floor(1000 / binSize); // 1000Hz+ (Noise)
+
+        let lowFreqSum = 0;
+        let lowFreqCount = 0;
+        let highFreqSum = 0;
+        let highFreqCount = 0;
+
+        for (let i = lowBandStart; i <= lowBandEnd; i++) {
+            lowFreqSum += dataArray[i];
+            lowFreqCount++;
+        }
+
+        for (let i = highBandStart; i < bufferLength; i++) {
+            highFreqSum += dataArray[i];
+            highFreqCount++;
+        }
+
+        const lowAvg = lowFreqCount > 0 ? lowFreqSum / lowFreqCount : 0;
+        const highAvg = highFreqCount > 0 ? highFreqSum / highFreqCount : 0;
+
+        // Ratio: How much stronger is the low freq?
+        // Breathing/Snoring is usually low-frequency dominant.
+        // Paper rustling or car horns are high-frequency or broadband.
+        const isLowFreqDominant = lowAvg > (highAvg * 1.2); // Low must be 20% stronger than high
+
+        // 2. Detection Logic
+        const isLoudEnough = volumeDb > this.snoreThreshold;
+
+        if (isLoudEnough && isLowFreqDominant) {
+            this.snoreConsecutiveCount++;
+        } else {
+            // Not snoring now.
+            // If we had a long enough sequence, register it.
+            // 100ms interval. 5 counts = 0.5 sec.
+            if (this.snoreConsecutiveCount >= 5) {
+                // Verified Snore Event!
+                this.recordSnoreEvent(Date.now() - (this.snoreConsecutiveCount * 100), volumeDb);
+            }
+            this.snoreConsecutiveCount = 0;
+        }
+
+        // --- Data Logging for Chart (Keep 1 sec interval) ---
         const now = Date.now();
         if (this.decibelHistory.length === 0 || now - this.decibelHistory[this.decibelHistory.length - 1].time > 1000) {
             this.decibelHistory.push({
                 time: now - this.startTime,
                 avg: volumeDb,
-                max: volumeDb
+                max: volumeDb,
+                isSnore: this.snoreConsecutiveCount >= 5 // Mark if this second contained snoring
             });
-
-            // Track global max
             if (volumeDb > this.maxVolume) this.maxVolume = volumeDb;
         } else {
-            // Update current second max
             const last = this.decibelHistory[this.decibelHistory.length - 1];
             if (volumeDb > last.max) last.max = volumeDb;
-            // Simple running average update
             last.avg = Math.round((last.avg + volumeDb) / 2);
+            if (this.snoreConsecutiveCount >= 5) last.isSnore = true;
         }
+    }
+
+    // Helper to store specific events
+    recordSnoreEvent(timestamp, maxDb) {
+        // Prevent duplicate events too close
+        const timeSinceLast = Date.now() - this.lastSnoreTime;
+        if (timeSinceLast < 1000) return; // Merge close events
+
+        this.lastSnoreTime = Date.now();
+        this.snoreEvents.push({
+            time: timestamp - this.startTime,
+            volume: maxDb
+        });
+        console.log("Snore Detected at", this.formatDuration(timestamp - this.startTime));
     }
 
     updateTimer() {
@@ -309,16 +375,18 @@ class SnoreDetector {
         this.elements.avgVolume.textContent = `${avgDb} dB`;
         this.elements.maxVolumeResult.textContent = `${maxDb} dB`;
 
-        // Determine Severity based on loud noise percentage
-        const loudSamples = this.decibelHistory.filter(d => d.max > 40).length; // simple baseline
-        const snorePercentage = (loudSamples / validSamples) * 100;
+        // Determine Severity based on CONFIRMED snore events (Frequency & Duration validated)
+        // Count seconds where snoring was detected
+        const snoreSeconds = this.decibelHistory.filter(d => d.isSnore).length;
+        const snorePercentage = (snoreSeconds / validSamples) * 100;
 
         let status = '정상', desc = '편안한 수면이었습니다', icon = 'check_circle', color = 'var(--success)';
 
-        if (snorePercentage > 15) {
+        // Thresholds adjusted for stricter algorithm
+        if (snorePercentage > 5) { // More than 5% of sleep time snoring
             status = '주의'; desc = '코골이가 자주 감지되었습니다'; icon = 'warning'; color = 'var(--warning)';
         }
-        if (snorePercentage > 40) {
+        if (snorePercentage > 20) {
             status = '심각'; desc = '수면 환경 개선이나 상담이 필요할 수 있습니다'; icon = 'error'; color = 'var(--danger)';
         }
 
@@ -425,24 +493,35 @@ class SnoreDetector {
         const list = this.elements.eventsList;
         list.innerHTML = '';
 
-        // Find top 5 loudest moments > threshold
-        const loudMoments = this.decibelHistory
-            .filter(d => d.max > this.snoreThreshold)
-            .sort((a, b) => b.max - a.max)
-            .slice(0, 5);
+        // Sort snore events by volume (loudest first) and take top 5
+        // If no snoreEvents recorded (very short test), fallback to detected snore segments
+        let displayEvents = [];
 
-        if (loudMoments.length === 0) {
-            list.innerHTML = '<div class="event-item" style="justify-content:center; color:var(--text-muted);">감지된 큰 소음이 없습니다</div>';
+        if (this.snoreEvents.length > 0) {
+            displayEvents = [...this.snoreEvents]
+                .sort((a, b) => b.volume - a.volume)
+                .slice(0, 5);
+        } else {
+            // Fallback for compatibility or short tests
+            displayEvents = this.decibelHistory
+                .filter(d => d.max > this.snoreThreshold && d.isSnore)
+                .sort((a, b) => b.max - a.max)
+                .slice(0, 5)
+                .map(d => ({ time: d.time, volume: d.max }));
+        }
+
+        if (displayEvents.length === 0) {
+            list.innerHTML = '<div class="event-item" style="justify-content:center; color:var(--text-muted);">감지된 코골이 없음 (편안한 수면)</div>';
             return;
         }
 
-        loudMoments.forEach(m => {
+        displayEvents.forEach(m => {
             const div = document.createElement('div');
             div.className = 'event-item';
             div.innerHTML = `
                 <span class="event-time">${this.formatDuration(m.time)}</span>
-                <span class="event-duration">시점</span>
-                <span class="event-intensity high">${m.max} dB</span>
+                <span class="event-duration">코골이 감지</span>
+                <span class="event-intensity high">${m.volume} dB</span>
             `;
             list.appendChild(div);
         });
